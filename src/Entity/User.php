@@ -1,0 +1,237 @@
+<?php
+
+namespace App\Entity;
+
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Put;
+use ApiPlatform\Metadata\Get;
+use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Constraints\Email;
+use Webmozart\Assert\Assert;
+use function PHPSTORM_META\type;
+
+#[ORM\Entity(repositoryClass: UserRepository::class)]
+#[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
+#[ApiResource(
+    operations:[
+        new Post(security:"is_granted('ROLE_ADMIN')"),
+        new Get(security:"is_granted('ROLE_ADMIN')"),
+        new GetCollection(security:"is_granted('ROLE_ADMIN')"),
+        new Delete(security:"is_granted('ROLE_ADMIN')"),
+        new Put(security:"is_granted('ROLE_ADMIN')"),
+    ]
+)]
+class User implements UserInterface, PasswordAuthenticatedUserInterface
+{
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
+    private ?int $id = null;
+
+    #[ORM\Column(length: 180)]
+    #[Assert()]
+    private ?string $email = null;
+
+    /**
+     * @var list<string> The user roles
+     */
+    #[ORM\Column]
+    private array $roles = [];
+
+    /**
+     * @var string The hashed password
+     */
+    #[ORM\Column]
+    private ?string $password = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $fname = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $lname = null;
+
+    /**
+     * @var Collection<int, Emprunts>
+     */
+    #[ORM\OneToMany(targetEntity: Emprunts::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $emprunts;
+
+    /**
+     * @var Collection<int, Abonnements>
+     */
+    #[ORM\OneToMany(targetEntity: Abonnements::class, mappedBy: 'abonné', orphanRemoval: true)]
+    private Collection $abonnements;
+
+    public function __construct()
+    {
+        $this->emprunts = new ArrayCollection();
+        $this->abonnements = new ArrayCollection();
+    }
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getEmail(): ?string
+    {
+        return $this->email;
+    }
+
+    public function setEmail(string $email): static
+    {
+        $this->email = $email;
+
+        return $this;
+    }
+
+    /**
+     * A visual identifier that represents this user.
+     *
+     * @see UserInterface
+     */
+    public function getUserIdentifier(): string
+    {
+        return (string) $this->email;
+    }
+
+    /**
+     * @see UserInterface
+     * @return list<string>
+     */
+    public function getRoles(): array
+    {
+        $roles = $this->roles;
+        // guarantee every user at least has ROLE_USER
+        $roles[] = 'ROLE_USER';
+
+        return array_unique($roles);
+    }
+
+    /**
+     * @param list<string> $roles
+     */
+    public function setRoles(array $roles): static
+    {
+        $this->roles = $roles;
+
+        return $this;
+    }
+
+    /**
+     * @see PasswordAuthenticatedUserInterface
+     */
+    public function getPassword(): ?string
+    {
+        return $this->password;
+    }
+
+    public function setPassword(string $password): static
+    {
+        $this->password = $password;
+
+        return $this;
+    }
+
+    /**
+     * @see UserInterface
+     */
+    public function eraseCredentials(): void
+    {
+        // If you store any temporary, sensitive data on the user, clear it here
+        // $this->plainPassword = null;
+    }
+
+    public function getFname(): ?string
+    {
+        return $this->fname;
+    }
+
+    public function setFname(string $fname): static
+    {
+        $this->fname = $fname;
+
+        return $this;
+    }
+
+    public function getLname(): ?string
+    {
+        return $this->lname;
+    }
+
+    public function setLname(?string $lname): static
+    {
+        $this->lname = $lname;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Emprunts>
+     */
+    public function getEmprunts(): Collection
+    {
+        return $this->emprunts;
+    }
+
+    public function addEmprunt(Emprunts $emprunt): static
+    {
+        if (!$this->emprunts->contains($emprunt)) {
+            $this->emprunts->add($emprunt);
+            $emprunt->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeEmprunt(Emprunts $emprunt): static
+    {
+        if ($this->emprunts->removeElement($emprunt)) {
+            // set the owning side to null (unless already changed)
+            if ($emprunt->getUser() === $this) {
+                $emprunt->setUser(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Abonnements>
+     */
+    public function getAbonnements(): Collection
+    {
+        return $this->abonnements;
+    }
+
+    public function addAbonnement(Abonnements $abonnement): static
+    {
+        if (!$this->abonnements->contains($abonnement)) {
+            $this->abonnements->add($abonnement);
+            $abonnement->setAbonné($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAbonnement(Abonnements $abonnement): static
+    {
+        if ($this->abonnements->removeElement($abonnement)) {
+            // set the owning side to null (unless already changed)
+            if ($abonnement->getAbonné() === $this) {
+                $abonnement->setAbonné(null);
+            }
+        }
+
+        return $this;
+    }
+}
