@@ -34,16 +34,26 @@ class FetchCategoriesCommand extends Command
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $io = new SymfonyStyle($input, $output);
-        $io->title('Fetching categories from Open Library API');
+{
+    $io = new SymfonyStyle($input, $output);
 
-        try {
-            $categoriesData = $this->openLibraryService->fetchCategories();
+    try {
+        // Récupération des données de catégories
+        $categoriesData = $this->openLibraryService->fetchCategories();
 
-            foreach ($categoriesData as $categoryData) {
-                // Vérifie si la catégorie existe déjà dans la base de données
-                $existingCategory = $this->entityManager->getRepository(Categories::class)->findOneBy(['categorie' => $categoryData['name']]);
+        // Vérification des données obtenues
+        if (empty($categoriesData)) {
+            $io->warning('Aucune catégorie récupérée depuis l\'API.');
+            return Command::FAILURE;
+        }
+
+        $io->info('Catégories récupérées : ' . json_encode($categoriesData));
+
+        // Traitement des données et enregistrement dans la base
+        foreach ($categoriesData as $categoryData) {
+            if (is_array($categoryData) && isset($categoryData['name'])) {
+                $existingCategory = $this->entityManager->getRepository(Categories::class)
+                    ->findOneBy(['nom' => $categoryData['name']]);
 
                 if (!$existingCategory) {
                     $category = new Categories();
@@ -51,16 +61,15 @@ class FetchCategoriesCommand extends Command
                     $this->entityManager->persist($category);
                 }
             }
-
-            $this->entityManager->flush();
-            $io->success('Catégories récupérées et stockées avec succès.');
-
-        } catch (\Exception $e) {
-            $io->error('Erreur lors de la récupération des catégories : ' . $e->getMessage());
-            return Command::FAILURE;
         }
 
-        $io->success('Tâche terminée.');
-        return Command::SUCCESS;
+        $this->entityManager->flush();
+        $io->success('Catégories récupérées et stockées avec succès.');
+    } catch (\Exception $e) {
+        $io->error('Erreur lors de la récupération des catégories : ' . $e->getMessage());
     }
+
+    return Command::SUCCESS;
+}
+
 }

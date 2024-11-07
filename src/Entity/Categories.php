@@ -12,7 +12,13 @@ use App\Repository\CategoriesRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-
+use ApiPlatform\Metadata\GraphQl\Mutation;
+use ApiPlatform\Metadata\GraphQl\Query;
+use ApiPlatform\Metadata\GraphQl\QueryCollection;
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use Symfony\Component\Validator\Constraints as Assert;
+#[ApiFilter(SearchFilter::class, properties: ['categorie' => 'partial'])]
 #[ORM\Entity(repositoryClass: CategoriesRepository::class)]
 #[ApiResource(
     operations:[
@@ -21,7 +27,19 @@ use Doctrine\ORM\Mapping as ORM;
         new GetCollection(security:"is_granted('ROLE_ADMIN')"),
         new Delete(security:"is_granted('ROLE_ADMIN')"),
         new Put(security:"is_granted('ROLE_ADMIN')"),
-    ]
+    ],
+     graphQlOperations:[
+            new Query(),
+            new QueryCollection(paginationEnabled:\false),
+            new Mutation(name:"create"),
+            new Mutation(name:"update"),
+            new Mutation(name:"delete"),
+            new Mutation(name:"restore"),
+            new QueryCollection(name:"collectionQuery",paginationEnabled:\false)
+        ],
+        paginationEnabled:false,
+security: "is_granted('ROLE_ADMIN')",
+securityMessage: "Accès refusé",
 )]
 class Categories
 {
@@ -31,6 +49,7 @@ class Categories
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\Unique()]
     private ?string $categorie = null;
 
     /**

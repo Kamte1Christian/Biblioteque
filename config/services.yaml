@@ -20,5 +20,16 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
+    App\Resolver\EmpruntsEnCoursQuery:
+        tags:
+          - { name: api_platform.graphql.query_resolver }
+
+    App\GraphQL\Resolver\ExemplairesParLivreResolver:
+        arguments:
+            $exemplaireRepository: '@App\Repository\ExemplairesRepository'
+        tags:
+          - { name: api_platform.graphql.query_resolver }
+
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

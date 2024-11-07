@@ -8,6 +8,9 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GraphQl\Mutation;
+use ApiPlatform\Metadata\GraphQl\Query;
+use ApiPlatform\Metadata\GraphQl\QueryCollection;
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -16,19 +19,35 @@ use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Constraints\Email;
-use Webmozart\Assert\Assert;
+use Symfony\Component\Validator\Constraints as Assert;
 use function PHPSTORM_META\type;
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
 
+#[ApiFilter(SearchFilter::class, properties: ['email' => 'exact', 'fname' => 'partial'])]
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[ApiResource(
-    operations:[
-        new Post(security:"is_granted('ROLE_ADMIN')"),
-        new Get(security:"is_granted('ROLE_ADMIN')"),
-        new GetCollection(security:"is_granted('ROLE_ADMIN')"),
-        new Delete(security:"is_granted('ROLE_ADMIN')"),
-        new Put(security:"is_granted('ROLE_ADMIN')"),
-    ]
+        operations:[
+            new Post(security:"is_granted('ROLE_ADMIN')"),
+            new Get(security:"is_granted('ROLE_ADMIN')"),
+            new GetCollection(security:"is_granted('ROLE_ADMIN')"),
+            new Delete(),
+            new Put(security:"is_granted('ROLE_ADMIN')"),
+        ],
+        graphQlOperations:[
+            new Query(),
+            new QueryCollection(paginationEnabled:\false),
+            new Mutation(name:"create"),
+            new Mutation(name:"update"),
+            new Mutation(name:"delete"),
+            new Mutation(name:"restore"),
+            new QueryCollection(name:"collectionQuery",paginationEnabled:\false)
+        ],
+        paginationEnabled:false,
+// security: "is_granted('ROLE_ADMIN')",
+// securityMessage: "Accès refusé",
+
 )]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
@@ -38,7 +57,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
-    #[Assert()]
+    #[Assert\NotBlank(message: "Email is required.")]
+    #[Assert\Email(message: "The email '{{ value }}' is not a valid email.")]
+    #[Assert\Unique()]
     private ?string $email = null;
 
     /**
@@ -51,9 +72,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      * @var string The hashed password
      */
     #[ORM\Column]
+     #[Assert\Length(
+        min: 8,
+        minMessage: "Password must be at least {{ limit }} characters long."
+    )]
     private ?string $password = null;
 
     #[ORM\Column(length: 255)]
+     #[Assert\NotBlank(message: "First name is required.")]
+    #[Assert\Length(
+        max: 50,
+        maxMessage: "First name cannot exceed {{ limit }} characters."
+    )]
     private ?string $fname = null;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -217,7 +247,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if (!$this->abonnements->contains($abonnement)) {
             $this->abonnements->add($abonnement);
-            $abonnement->setAbonné($this);
+            $abonnement->setAbonne($this);
         }
 
         return $this;
@@ -227,8 +257,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if ($this->abonnements->removeElement($abonnement)) {
             // set the owning side to null (unless already changed)
-            if ($abonnement->getAbonné() === $this) {
-                $abonnement->setAbonné(null);
+            if ($abonnement->getAbonne() === $this) {
+                $abonnement->setAbonne(null);
             }
         }
 

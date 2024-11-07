@@ -12,7 +12,11 @@ use App\Repository\TypeAbonnementRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use ApiPlatform\Metadata\GraphQl\Mutation;
+use ApiPlatform\Metadata\GraphQl\Query;
+use ApiPlatform\Metadata\GraphQl\QueryCollection;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: TypeAbonnementRepository::class)]
 #[ApiResource(
@@ -22,8 +26,20 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
         new GetCollection(security:"is_granted('ROLE_ADMIN')"),
         new Delete(security:"is_granted('ROLE_ADMIN')"),
         new Put(security:"is_granted('ROLE_ADMIN')"),
-    ]
-)]
+    ],
+        graphQlOperations:[
+            new Query(),
+            new QueryCollection(paginationEnabled:\false),
+            new Mutation(name:"create"),
+            new Mutation(name:"update"),
+            new Mutation(name:"delete"),
+            new Mutation(name:"restore"),
+            new QueryCollection(name:"collectionQuery",paginationEnabled:\false)
+        ],
+        paginationEnabled:false,
+        security: "is_granted('ROLE_ADMIN')",
+        securityMessage: "Accès refusé",
+    )]
 class TypeAbonnement
 {
     #[ORM\Id]
@@ -32,6 +48,7 @@ class TypeAbonnement
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+     #[Assert\Unique()]
     private ?string $type = null;
 
     #[ORM\Column]

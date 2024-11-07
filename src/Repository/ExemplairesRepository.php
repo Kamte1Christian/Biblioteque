@@ -2,7 +2,9 @@
 
 namespace App\Repository;
 
+use App\Entity\Emprunts;
 use App\Entity\Exemplaires;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -11,9 +13,24 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class ExemplairesRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    private EmpruntsRepository $emprunt;
+    public function __construct(ManagerRegistry $registry, EmpruntsRepository $emprunt)
     {
         parent::__construct($registry, Exemplaires::class);
+        $this->emprunt=$emprunt;
+    }
+
+     public function countActiveExemplairesForUser(User $user): int
+    {
+        $emprunt= $this->emprunt->findBy(['user'=>$user]);
+        return $this->createQueryBuilder('ee')
+            ->select('COUNT(ee.id)')
+            ->join('ee.emprunt', 'e')
+            ->where('e.emprunt = :emprunt')
+            ->andWhere('ee.state ='.false)
+            ->setParameter('emprunt', $emprunt)
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 
 //    /**

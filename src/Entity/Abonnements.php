@@ -2,10 +2,40 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Put;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GraphQl\Mutation;
+use ApiPlatform\Metadata\GraphQl\Query;
+use ApiPlatform\Metadata\GraphQl\QueryCollection;
 use App\Repository\AbonnementsRepository;
 use Doctrine\ORM\Mapping as ORM;
-
 #[ORM\Entity(repositoryClass: AbonnementsRepository::class)]
+#[ApiResource(
+    operations:[
+        new Post(security:"is_granted('ROLE_ADMIN')"),
+        new Get(security:"is_granted('ROLE_ADMIN')"),
+        new GetCollection(security:"is_granted('ROLE_ADMIN')"),
+        new Delete(security:"is_granted('ROLE_ADMIN')"),
+        new Put(security:"is_granted('ROLE_ADMIN')"),
+    ],
+    graphQlOperations:[
+    new Query(),
+    new QueryCollection(paginationEnabled:false),
+    new Mutation(name:"create", paginationEnabled:false),
+    new Mutation(name:"update"),
+    new Mutation(name:"delete"),
+    new Mutation(name:"restore"),
+    new QueryCollection(name:"collectionQuery",paginationEnabled:false)
+],
+paginationEnabled:false,
+security: "is_granted('ROLE_ADMIN')",
+securityMessage: "Accès refusé",
+
+)]
 class Abonnements
 {
     #[ORM\Id]
@@ -15,7 +45,7 @@ class Abonnements
 
     #[ORM\ManyToOne(inversedBy: 'abonnements')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?User $abonné = null;
+    private ?User $abonne = null;
 
     #[ORM\ManyToOne(inversedBy: 'abonnements')]
     #[ORM\JoinColumn(nullable: false)]
@@ -32,14 +62,14 @@ class Abonnements
         return $this->id;
     }
 
-    public function getAbonné(): ?User
+    public function getAbonne(): ?User
     {
-        return $this->abonné;
+        return $this->abonne;
     }
 
-    public function setAbonné(?User $abonné): static
+    public function setAbonne(?User $abonne): static
     {
-        $this->abonné = $abonné;
+        $this->abonne = $abonne;
 
         return $this;
     }

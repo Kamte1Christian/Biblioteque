@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Abonnements;
 use App\Entity\User;
+use DateTime;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -27,13 +28,22 @@ class AbonnementsRepository extends ServiceEntityRepository
     public function findActiveAbonnement(User $user): ?Abonnements
     {
         return $this->createQueryBuilder('a')
-            ->andWhere('a.user = :user')
-            ->andWhere('a.dateFin > :now')
+            ->andWhere('a.abonne = :user')
+            ->andWhere('a.date_fin > :now')
             ->setParameter('user', $user)
             ->setParameter('now', new \DateTime())
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+     public function findSubscriptionsEndingIn(DateTime $endDate)
+    {
+        return $this->createQueryBuilder('a')
+            ->where('a.date_fin = :endDate')
+            ->setParameter('endDate', $endDate)
+            ->getQuery()
+            ->getResult();
     }
 
 //    /**

@@ -23,10 +23,17 @@ class OpenLibraryService
     public function fetchCategories(): array
     {
         $url = 'https://openlibrary.org/subjects.json';
-        $response = $this->httpClient->request('GET', $url);
-        $data = $response->toArray();
+        try {
+            $response = $this->httpClient->request('GET', $url);
+            $data = $response->toArray();
 
-        return $data;
+            if (isset($data['subjects']) && is_array($data['subjects'])) {
+                return $data['subjects'];
+            }
+              return []; // Retourne un tableau vide si la clé 'subjects' est absente
+        } catch (\Exception $e) {
+            throw new \RuntimeException('Erreur lors de la récupération des catégories : ' . $e->getMessage());
+        }
     }
 
     public function fetchBooksByCategory(Categories $categorie, int $limit = 100): array

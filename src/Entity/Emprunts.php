@@ -2,13 +2,46 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Put;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GraphQl\Mutation;
+use ApiPlatform\Metadata\GraphQl\Query;
+use ApiPlatform\Metadata\GraphQl\QueryCollection;
 use App\Repository\EmpruntsRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: EmpruntsRepository::class)]
+#[ApiResource(
+    operations:[
+        new Post(security:"is_granted('ROLE_ADMIN')"),
+        new Get(security:"is_granted('ROLE_ADMIN')"),
+        new GetCollection(security:"is_granted('ROLE_ADMIN')"),
+        new Delete(security:"is_granted('ROLE_ADMIN')"),
+        new Put(security:"is_granted('ROLE_ADMIN')"),
+    ],
+graphQlOperations:[
+    new Query(),
+    new QueryCollection(paginationEnabled:false),
+    new Mutation(name:"create"),
+    new Mutation(name:"update"),
+    new Mutation(name:"delete"),
+    new Mutation(name:"restore"),
+    new QueryCollection(name:"collectionQuery",paginationEnabled:false, resolver:"EmpruntsEnCoursQuery")
+],
+paginationEnabled:false,
+security: "is_granted('ROLE_ADMIN')",
+securityMessage: "Accès refusé",
+
+
+)]
 class Emprunts
 {
     #[ORM\Id]
@@ -34,15 +67,17 @@ class Emprunts
     private ?bool $isBacked = null;
 
     /**
-     * @var Collection<int, EmpruntExemplaire>
+     * @var Collection<int, Exemplaires>
      */
-    #[ORM\OneToMany(targetEntity: EmpruntExemplaire::class, mappedBy: 'emprunt', orphanRemoval: true)]
-    private Collection $empruntExemplaires;
+    #[ORM\OneToMany(targetEntity: Exemplaires::class, mappedBy: 'emprunt')]
+    private Collection $exemplaires;
 
     public function __construct()
     {
-        $this->empruntExemplaires = new ArrayCollection();
+        $this->exemplaires = new ArrayCollection();
     }
+
+
 
     public function getId(): ?int
     {
@@ -111,32 +146,33 @@ class Emprunts
     }
 
     /**
-     * @return Collection<int, EmpruntExemplaire>
+     * @return Collection<int, Exemplaires>
      */
-    public function getEmpruntExemplaires(): Collection
+    public function getExemplaires(): Collection
     {
-        return $this->empruntExemplaires;
+        return $this->exemplaires;
     }
 
-    public function addEmpruntExemplaire(EmpruntExemplaire $empruntExemplaire): static
+    public function addExemplaire(Exemplaires $exemplaire): self
     {
-        if (!$this->empruntExemplaires->contains($empruntExemplaire)) {
-            $this->empruntExemplaires->add($empruntExemplaire);
-            $empruntExemplaire->setEmprunt($this);
+        if ($this->exemplaires->count() < 3) {
+            $this->exemplaires->add($exemplaire);
+            $exemplaire->setEmprunt($this);
         }
 
         return $this;
     }
 
-    public function removeEmpruntExemplaire(EmpruntExemplaire $empruntExemplaire): static
+    public function removeExemplaire(Exemplaires $exemplaire): static
     {
-        if ($this->empruntExemplaires->removeElement($empruntExemplaire)) {
+        if ($this->exemplaires->removeElement($exemplaire)) {
             // set the owning side to null (unless already changed)
-            if ($empruntExemplaire->getEmprunt() === $this) {
-                $empruntExemplaire->setEmprunt(null);
+            if ($exemplaire->getEmprunt() === $this) {
+                $exemplaire->setEmprunt(null);
             }
         }
 
         return $this;
     }
+
 }

@@ -6,8 +6,39 @@ use App\Repository\ExemplairesRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Put;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GraphQl\Mutation;
+use ApiPlatform\Metadata\GraphQl\Query;
+use ApiPlatform\Metadata\GraphQl\QueryCollection;
 
 #[ORM\Entity(repositoryClass: ExemplairesRepository::class)]
+#[ApiResource(
+        operations:[
+            new Post(security:"is_granted('ROLE_ADMIN')"),
+            new Get(security:"is_granted('ROLE_ADMIN')"),
+            new GetCollection(security:"is_granted('ROLE_ADMIN')"),
+            new Delete(security:"is_granted('ROLE_ADMIN')"),
+            new Put(security:"is_granted('ROLE_ADMIN')"),
+        ],
+        graphQlOperations:[
+            new Query(),
+            new QueryCollection(paginationEnabled:\false),
+            new Mutation(name:"create"),
+            new Mutation(name:"update"),
+            new Mutation(name:"delete"),
+            new Mutation(name:"restore"),
+            new QueryCollection(name:"collectionQuery",paginationEnabled:\false,resolver:"ExemplairesParLivreResolver")
+        ],
+        paginationEnabled:false,
+security: "is_granted('ROLE_ADMIN')",
+securityMessage: "Accès refusé",
+
+)]
 class Exemplaires
 {
     #[ORM\Id]
@@ -19,26 +50,14 @@ class Exemplaires
     #[ORM\JoinColumn(nullable: false)]
     private ?Livres $livre = null;
 
-    /**
-     * @var Collection<int, Emprunts>
-     */
-    #[ORM\OneToMany(targetEntity: Emprunts::class, mappedBy: 'exemplaire')]
-    private Collection $emprunts;
-
     #[ORM\Column]
     private ?int $code_bar = null;
 
-    /**
-     * @var Collection<int, EmpruntExemplaire>
-     */
-    #[ORM\OneToMany(targetEntity: EmpruntExemplaire::class, mappedBy: 'exemplaire')]
-    private Collection $empruntExemplaires;
+    #[ORM\ManyToOne(inversedBy: 'exemplaires')]
+    private ?emprunts $emprunt = null;
 
-    public function __construct()
-    {
-        $this->emprunts = new ArrayCollection();
-        $this->empruntExemplaires = new ArrayCollection();
-    }
+    #[ORM\Column]
+    private ?bool $state = false;
 
     public function getId(): ?int
     {
@@ -57,36 +76,6 @@ class Exemplaires
         return $this;
     }
 
-    /**
-     * @return Collection<int, Emprunts>
-     */
-    public function getEmprunts(): Collection
-    {
-        return $this->emprunts;
-    }
-
-    public function addEmprunt(Emprunts $emprunt): static
-    {
-        if (!$this->emprunts->contains($emprunt)) {
-            $this->emprunts->add($emprunt);
-            $emprunt->setExemplaire($this);
-        }
-
-        return $this;
-    }
-
-    public function removeEmprunt(Emprunts $emprunt): static
-    {
-        if ($this->emprunts->removeElement($emprunt)) {
-            // set the owning side to null (unless already changed)
-            if ($emprunt->getExemplaire() === $this) {
-                $emprunt->setExemplaire(null);
-            }
-        }
-
-        return $this;
-    }
-
     public function getCodeBar(): ?int
     {
         return $this->code_bar;
@@ -99,33 +88,28 @@ class Exemplaires
         return $this;
     }
 
-    /**
-     * @return Collection<int, EmpruntExemplaire>
-     */
-    public function getEmpruntExemplaires(): Collection
+    public function getEmprunt(): ?emprunts
     {
-        return $this->empruntExemplaires;
+        return $this->emprunt;
     }
 
-    public function addEmpruntExemplaire(EmpruntExemplaire $empruntExemplaire): static
+    public function setEmprunt(?emprunts $emprunt): static
     {
-        if (!$this->empruntExemplaires->contains($empruntExemplaire)) {
-            $this->empruntExemplaires->add($empruntExemplaire);
-            $empruntExemplaire->setExemplaire($this);
-        }
+        $this->emprunt = $emprunt;
 
         return $this;
     }
 
-    public function removeEmpruntExemplaire(EmpruntExemplaire $empruntExemplaire): static
+    public function isState(): ?bool
     {
-        if ($this->empruntExemplaires->removeElement($empruntExemplaire)) {
-            // set the owning side to null (unless already changed)
-            if ($empruntExemplaire->getExemplaire() === $this) {
-                $empruntExemplaire->setExemplaire(null);
-            }
-        }
+        return $this->state;
+    }
+
+    public function setState(bool $state): static
+    {
+        $this->state = $state;
 
         return $this;
     }
+
 }

@@ -12,16 +12,73 @@ use App\Repository\LivresRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use ApiPlatform\Metadata\GraphQl\Mutation;
+use ApiPlatform\Metadata\GraphQl\Query;
+use ApiPlatform\Metadata\GraphQl\QueryCollection;
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use PhpParser\Node\Scalar\MagicConst\File;
+use Symfony\Component\Validator\Constraints as Assert;
+use Vich\UploaderBundle\Mapping\Annotation as Vich;
+use ApiPlatform\OpenApi\Model;
+use App\State\SaveMediaObject;
 
+#[ApiFilter(SearchFilter::class, properties: ['email' => 'exact', 'fname' => 'partial'])]
 #[ORM\Entity(repositoryClass: LivresRepository::class)]
+#[Vich\Uploadable]
 #[ApiResource(
     operations:[
         new Post(security:"is_granted('ROLE_ADMIN')"),
+         new Post(
+            inputFormats: ['multipart' => ['multipart/form-data']],
+            openapi: new Model\Operation(
+                requestBody: new Model\RequestBody(
+                    content: new \ArrayObject([
+                        'multipart/form-data' => [
+                            'schema' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    'coverImageFile' => [
+                                        'type' => 'string',
+                                        'format' => 'binary'
+                                    ],
+                                    'title' => [
+                                        'type' => 'string'
+                                    ],
+                                    'auteur' => [
+                                        'type' => 'string'
+                                    ],
+                                    'description' => [
+                                        'type' => 'string'
+                                    ],
+                                    'date_publication' => [
+                                        'type' => 'DateTimeImmutable'
+                                    ],
+                                ]
+                            ]
+                        ]
+                    ])
+                )
+            )
+        ),
         new Get(security:"is_granted('ROLE_ADMIN')"),
         new GetCollection(security:"is_granted('ROLE_ADMIN')"),
         new Delete(security:"is_granted('ROLE_ADMIN')"),
         new Put(security:"is_granted('ROLE_ADMIN')"),
-    ]
+    ],
+
+     graphQlOperations:[
+            new Query(),
+            new QueryCollection(paginationEnabled:\false),
+            new Mutation(name:"create"),
+            new Mutation(name:"update"),
+            new Mutation(name:"delete"),
+            new Mutation(name:"restore"),
+            new QueryCollection(name:"collectionQuery",paginationEnabled:\false)
+        ],
+        paginationEnabled:false,
+security: "is_granted('ROLE_ADMIN')",
+securityMessage: "Accès refusé",
 )]
 class Livres
 {
@@ -62,6 +119,44 @@ class Livres
 
      #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $editionKey = null;
+
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $coverImageName = null;
+
+    #[Vich\UploadableField(mapping: 'livre_cover_image', fileNameProperty: 'coverImageName')]
+    #[Assert\File(
+        maxSize: "2M",
+        mimeTypes: ["image/jpeg", "image/png"],
+        mimeTypesMessage: "Please upload a valid image (JPEG or PNG)."
+    )]
+    private ?File $coverImageFile = null;
+
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    private ?\DateTimeInterface $updatedAt = null;
+
+    public function setCoverImageFile(?File $coverImageFile = null): void
+    {
+        $this->coverImageFile = $coverImageFile;
+
+        if ($coverImageFile) {
+            $this->updatedAt = new \DateTime();
+        }
+    }
+
+    public function getCoverImageFile(): ?File
+    {
+        return $this->coverImageFile;
+    }
+
+    public function setCoverImageName(?string $coverImageName): void
+    {
+        $this->coverImageName = $coverImageName;
+    }
+
+    public function getCoverImageName(): ?string
+    {
+        return $this->coverImageName;
+    }
 
     public function __construct()
     {

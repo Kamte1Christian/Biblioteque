@@ -12,16 +12,36 @@ use App\Repository\ClassesRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use ApiPlatform\Metadata\GraphQl\Mutation;
+use ApiPlatform\Metadata\GraphQl\Query;
+use ApiPlatform\Metadata\GraphQl\QueryCollection;
+use Symfony\Component\Validator\Constraints as Assert;
+use function PHPSTORM_META\type;
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
 
+#[ApiFilter(SearchFilter::class, properties: ['classe' => 'partial'])]
 #[ORM\Entity(repositoryClass: ClassesRepository::class)]
 #[ApiResource(
     operations:[
-        new Post(),
+        new Post(security:"is_granted('ROLE_ADMIN')"),
         new Get(security:"is_granted('ROLE_ADMIN')"),
         new GetCollection(security:"is_granted('ROLE_ADMIN')"),
         new Delete(security:"is_granted('ROLE_ADMIN')"),
         new Put(security:"is_granted('ROLE_ADMIN')"),
-    ]
+    ],
+     graphQlOperations:[
+            new Query(),
+            new QueryCollection(paginationEnabled:\false),
+            new Mutation(name:"create"),
+            new Mutation(name:"update"),
+            new Mutation(name:"delete"),
+            new Mutation(name:"restore"),
+            new QueryCollection(name:"collectionQuery",paginationEnabled:\false)
+        ],
+        paginationEnabled:false,
+security: "is_granted('ROLE_ADMIN')",
+securityMessage: "Accès refusé",
 )]
 class Classes
 {
@@ -31,6 +51,7 @@ class Classes
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\Unique()]
     private ?string $classe = null;
 
     /**
