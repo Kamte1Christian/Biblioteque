@@ -23,26 +23,52 @@ use Symfony\Component\Validator\Constraints as Assert;
 use function PHPSTORM_META\type;
 use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use App\Resolver\LoginMutation;
+use App\State\UserProcessor;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface as HasherUserPasswordHasherInterface;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 #[ApiFilter(SearchFilter::class, properties: ['email' => 'exact', 'fname' => 'partial'])]
+#[ORM\HasLifecycleCallbacks]
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[ApiResource(
         operations:[
-            new Post(security:"is_granted('ROLE_ADMIN')"),
+            new Post(
+                processor:UserProcessor::class
+            ),
             new Get(security:"is_granted('ROLE_ADMIN')"),
             new GetCollection(security:"is_granted('ROLE_ADMIN')"),
             new Delete(),
-            new Put(security:"is_granted('ROLE_ADMIN')"),
+            new Put(
+                security:"is_granted('ROLE_ADMIN')",
+                processor:"UserProcessor"
+                ),
         ],
         graphQlOperations:[
             new Query(),
             new QueryCollection(paginationEnabled:\false),
-            new Mutation(name:"create"),
-            new Mutation(name:"update"),
+            new Mutation(
+                name:"create",
+                processor:"UserProcessor"
+                ),
+            new Mutation(
+                name:"update",
+                processor: UserProcessor::class
+                ),
             new Mutation(name:"delete"),
             new Mutation(name:"restore"),
-            new QueryCollection(name:"collectionQuery",paginationEnabled:\false)
+            new QueryCollection(name:"collectionQuery",paginationEnabled:\false),
+            new Mutation(
+            name: 'login',
+            resolver: LoginMutation::class,
+            args: [
+                'email' => ['type' => 'String!'],
+                'password' => ['type' => 'String!'],
+            ],
+            description: 'Authenticate a user and return a JWT token'
+        ),
         ],
         paginationEnabled:false,
 // security: "is_granted('ROLE_ADMIN')",
@@ -56,10 +82,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 180)]
-    #[Assert\NotBlank(message: "Email is required.")]
-    #[Assert\Email(message: "The email '{{ value }}' is not a valid email.")]
-    #[Assert\Unique()]
+    #[ORM\Column(type: "string", length: 180)]
+    // #[Assert\NotBlank(message: "Email is required.")]
+    // #[Assert\Email(message: "The email '{{ value }}' is not a valid email.")]
+    // #[Assert\Unique(message:"cet email existe deja")]
     private ?string $email = null;
 
     /**
@@ -71,11 +97,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @var string The hashed password
      */
-    #[ORM\Column]
-     #[Assert\Length(
-        min: 8,
-        minMessage: "Password must be at least {{ limit }} characters long."
-    )]
+    #[ORM\Column(nullable: true)]
     private ?string $password = null;
 
     #[ORM\Column(length: 255)]
@@ -98,14 +120,38 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @var Collection<int, Abonnements>
      */
-    #[ORM\OneToMany(targetEntity: Abonnements::class, mappedBy: 'abonné', orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: Abonnements::class, mappedBy: 'abonne', orphanRemoval: true)]
     private Collection $abonnements;
 
-    public function __construct()
+     #[ORM\Column()]
+     #[Assert\NotBlank]
+     #[Assert\Length(
+        min: 8,
+        minMessage: "Password must be at least {{ limit }} characters long."
+    )]
+    private ?string $plainPassword = null;
+
+    // private UserPasswordHasherInterface $passwordHasher;
+
+    // public function __construct(UserPasswordHasherInterface $passwordHasher)
+    // {
+    //     $this->passwordHasher = $passwordHasher;
+    //      $this->emprunts = new ArrayCollection();
+    //     $this->abonnements = new ArrayCollection();
+    // }
+
+    public function getPlainPassword(): ?string
     {
-        $this->emprunts = new ArrayCollection();
-        $this->abonnements = new ArrayCollection();
+        return $this->plainPassword;
     }
+
+    public function setPlainPassword(?string $plainPassword): self
+    {
+        $this->plainPassword = $plainPassword;
+        return $this;
+    }
+
+
 
     public function getId(): ?int
     {
@@ -264,4 +310,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
+
+    //  public function hashPassword(): void
+    // {
+    //     if ($this->plainPassword) {
+    //         $this->password = $this->passwordHasher->hashPassword($this, $this->plainPassword);
+    //         $this->plainPassword = null; // Clear plain password after hashing
+    //     }
+    // }
 }

@@ -30,6 +30,22 @@ services:
         tags:
           - { name: api_platform.graphql.query_resolver }
 
+    # App\EventListener\UserPasswordListener:
+    #     tags:
+    #         - { name: doctrine.orm.entity_listener }
+
+    App\State\UserProcessor:
+        arguments:
+            $passwordHasher: '@security.user_password_hasher'
+            $entityManager: '@doctrine.orm.entity_manager'
+
+    App\Resolver\LoginMutation:
+        arguments:
+            $userProvider: '@security.user.provider.concrete.app_user_provider'
+            $passwordEncoder: '@security.password_encoder'
+            $jwtManager: '@lexik_jwt_authentication.jwt_manager'
+        tags: ['api_platform.graphql.mutation_resolver']
+
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
