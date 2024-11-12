@@ -12,6 +12,7 @@ use ApiPlatform\Metadata\GraphQl\Mutation;
 use ApiPlatform\Metadata\GraphQl\Query;
 use ApiPlatform\Metadata\GraphQl\QueryCollection;
 use App\Repository\AbonnementsRepository;
+use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: AbonnementsRepository::class)]
 #[ApiResource(
@@ -93,7 +94,7 @@ class Abonnements
 
     public function setDateDebut(\DateTimeImmutable $date_debut): static
     {
-        $this->date_debut = $date_debut;
+        $this->date_debut = new DateTimeImmutable();
 
         return $this;
     }

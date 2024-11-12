@@ -1,45 +1,47 @@
 <?php
-
 namespace App\Resolver;
 
 use ApiPlatform\GraphQl\Resolver\MutationResolverInterface;
+use App\Entity\User;
+use App\Dto\LoginResponse;
+use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
-use Symfony\Component\Security\Core\User\UserProviderInterface;
-use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Security\Core\Exception\AuthenticationException;
 
-class LoginMutation implements MutationResolverInterface
+class LoginResolver implements MutationResolverInterface
 {
-    private UserProviderInterface $userProvider;
-    private UserPasswordHasherInterface $passwordEncoder;
+    private EntityManagerInterface $entityManager;
+    private UserPasswordHasherInterface $passwordHasher;
     private JWTTokenManagerInterface $jwtManager;
 
     public function __construct(
-        UserProviderInterface $userProvider,
-        UserPasswordHasherInterface $passwordEncoder,
+        EntityManagerInterface $entityManager,
+        UserPasswordHasherInterface $passwordHasher,
         JWTTokenManagerInterface $jwtManager
     ) {
-        $this->userProvider = $userProvider;
-        $this->passwordEncoder = $passwordEncoder;
+        $this->entityManager = $entityManager;
+        $this->passwordHasher = $passwordHasher;
         $this->jwtManager = $jwtManager;
     }
 
-    public function __invoke(array $args): array
+    public function __invoke(?object $item, array $context): ?LoginResponse
     {
-        $email = $args['email'];
-        $password = $args['password'];
+        $args = $context['args'] ?? [];
 
-        // Load the user by email
-        $user = $this->userProvider->loadUserByIdentifier($email);
+        if (empty($args['email']) || empty($args['password'])) {
+            throw new \InvalidArgumentException("Email and password are required.");
+        }
 
-        if (!$user || !$this->passwordEncoder->isPasswordValid($user, $password)) {
+        $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $args['email']]);
+        if (!$user || !$this->passwordHasher->isPasswordValid($user, $args['password'])) {
             throw new AuthenticationException('Invalid credentials.');
         }
 
-        // Generate a JWT token
+        // Generate the JWT token
         $token = $this->jwtManager->create($user);
 
-        return ['token' => $token];
+        // Return a LoginResponse object
+        return new LoginResponse($token, $user);
     }
 }

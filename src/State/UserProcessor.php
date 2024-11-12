@@ -1,38 +1,31 @@
 <?php
-
 namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Entity\User;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class UserProcessor implements ProcessorInterface
 {
-    private UserPasswordHasherInterface $passwordHasher;
-    private EntityManagerInterface $entityManager;
+    public function __construct(
+        private UserPasswordHasherInterface $passwordHasher,
+        private EntityManagerInterface $em
+    ) {}
 
-    public function __construct(UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager)
+    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): mixed
     {
-        $this->passwordHasher = $passwordHasher;
-        $this->entityManager = $entityManager;
-    }
+        if ($data instanceof User) {
+            if ($password = $data->getPassword()) {
+                $hashedPassword = $this->passwordHasher->hashPassword($data, $password);
+                $data->setPassword($hashedPassword);
+            }
 
-    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): void
-    {
-        if (!$data instanceof User) {
-            return;
+            $this->em->persist($data);
+            $this->em->flush();
         }
 
-        if ($data->getPlainPassword()) {
-            // Hash the plain password and set it
-            $hashedPassword = $this->passwordHasher->hashPassword($data, $data->getPlainPassword());
-            $data->setPassword($hashedPassword);
-            $data->setPlainPassword(null); // Clear the plain password
-        }
-
-        $this->entityManager->persist($data);
-        $this->entityManager->flush();
+        return $data;
     }
 }
