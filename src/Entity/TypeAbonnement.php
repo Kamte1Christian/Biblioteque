@@ -54,14 +54,14 @@ class TypeAbonnement
     private ?int $duree_jours = null;
 
     /**
-     * @var Collection<int, Abonnements>
+     * @var Collection<int, Abonnement>
      */
-    #[ORM\OneToMany(targetEntity: Abonnements::class, mappedBy: 'type')]
-    private Collection $abonnements;
+    #[ORM\OneToMany(targetEntity: Abonnement::class, mappedBy: 'type')]
+    private Collection $Abonnement;
 
     public function __construct()
     {
-        $this->abonnements = new ArrayCollection();
+        $this->Abonnement = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -94,26 +94,26 @@ class TypeAbonnement
     }
 
     /**
-     * @return Collection<int, Abonnements>
+     * @return Collection<int, Abonnement>
      */
-    public function getAbonnements(): Collection
+    public function getAbonnement(): Collection
     {
-        return $this->abonnements;
+        return $this->Abonnement;
     }
 
-    public function addAbonnement(Abonnements $abonnement): static
+    public function addAbonnement(Abonnement $abonnement): static
     {
-        if (!$this->abonnements->contains($abonnement)) {
-            $this->abonnements->add($abonnement);
+        if (!$this->Abonnement->contains($abonnement)) {
+            $this->Abonnement->add($abonnement);
             $abonnement->setType($this);
         }
 
         return $this;
     }
 
-    public function removeAbonnement(Abonnements $abonnement): static
+    public function removeAbonnement(Abonnement $abonnement): static
     {
-        if ($this->abonnements->removeElement($abonnement)) {
+        if ($this->Abonnement->removeElement($abonnement)) {
             // set the owning side to null (unless already changed)
             if ($abonnement->getType() === $this) {
                 $abonnement->setType(null);

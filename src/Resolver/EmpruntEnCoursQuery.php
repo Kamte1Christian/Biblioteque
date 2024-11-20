@@ -3,18 +3,18 @@
 namespace App\Resolver;
 
 use App\Repository\AbonnementRepository;
-use App\Repository\AbonnementsRepository;
+
 use Overblog\GraphQLBundle\Definition\Argument;
 use Overblog\GraphQLBundle\Definition\Resolver\QueryInterface;
 use DateTime;
 use GraphQL\Type\Definition\Argument as DefinitionArgument;
 
-class EmpruntsEnCoursQuery
+class EmpruntEnCoursQuery
 {
 
-     private AbonnementsRepository $abonnementRepository;
+     private AbonnementRepository $abonnementRepository;
 
-    public function __construct(AbonnementsRepository $abonnementRepository)
+    public function __construct(AbonnementRepository $abonnementRepository)
     {
         $this->abonnementRepository = $abonnementRepository;
     }
@@ -23,7 +23,7 @@ class EmpruntsEnCoursQuery
     {
 
     }
-    
+
     public function subscriptionsEndingInTwoDays(DefinitionArgument $args)
     {
         $today = new DateTime();

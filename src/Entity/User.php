@@ -20,7 +20,10 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Constraints as Assert;
 use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\Patch;
 use App\Dto\LoginResponse;
+use App\Resolver\CreateAbonnementResolver;
 use App\Resolver\LoginMutation;
 use App\Resolver\LoginResolver;
 use App\Resolver\TokenAuthentication;
@@ -28,6 +31,7 @@ use App\State\UserProcessor;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
+#[ApiFilter(SearchFilter::class, properties: ['email' => 'exact', 'fname' => 'partial'])]
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[ApiResource(
@@ -36,7 +40,13 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
         new Get(security: "is_granted('ROLE_ADMIN')"),
         new GetCollection(security: "is_granted('ROLE_ADMIN')"),
         new Delete(),
-        new Put(security: "is_granted('ROLE_ADMIN')", processor: "UserProcessor"),
+        new Put(
+            uriTemplate: '/users/{id}',
+            processor: UserProcessor::class
+        ),
+        new Patch(
+            processor: UserProcessor::class
+            )
     ],
     graphQlOperations: [
         new Query(),
@@ -52,17 +62,6 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
         new Mutation(name: "delete"),
         new Mutation(name: "restore"),
         new QueryCollection(name: "collectionQuery", paginationEnabled: false),
-        new Mutation(
-            name: 'login',
-            resolver: LoginResolver::class,
-            args: [
-                'email' => ['type' => 'String!'],
-                'password' => ['type' => 'String!'],
-                'fname' => ['type' => 'String!']
-            ],
-            description: 'Log in a user and return a JWT token if successful.',
-            output: LoginResponse::class
-        ),
         new Mutation(
             name: 'connectWithToken',
             resolver: TokenAuthentication::class,
@@ -105,16 +104,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $lname = null;
 
-    #[ORM\OneToMany(targetEntity: Emprunts::class, mappedBy: 'user', orphanRemoval: true)]
-    private Collection $emprunts;
+    #[ORM\OneToMany(targetEntity: Emprunt::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $Emprunt;
 
-    #[ORM\OneToMany(targetEntity: Abonnements::class, mappedBy: 'abonne', orphanRemoval: true)]
-    private Collection $abonnements;
+    #[ORM\OneToMany(targetEntity: Abonnement::class, mappedBy: 'abonne', orphanRemoval: true)]
+    private Collection $Abonnement;
 
     public function __construct()
     {
-        $this->emprunts = new ArrayCollection();
-        $this->abonnements = new ArrayCollection();
+        $this->Emprunt = new ArrayCollection();
+        $this->Abonnement = new ArrayCollection();
     }
 
     // Password handling (hashing logic)
@@ -205,24 +204,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getEmprunts(): Collection
+    public function getEmprunt(): Collection
     {
-        return $this->emprunts;
+        return $this->Emprunt;
     }
 
-    public function addEmprunt(Emprunts $emprunt): static
+    public function addEmprunt(Emprunt $emprunt): static
     {
-        if (!$this->emprunts->contains($emprunt)) {
-            $this->emprunts->add($emprunt);
+        if (!$this->Emprunt->contains($emprunt)) {
+            $this->Emprunt->add($emprunt);
             $emprunt->setUser($this);
         }
 
         return $this;
     }
 
-    public function removeEmprunt(Emprunts $emprunt): static
+    public function removeEmprunt(Emprunt $emprunt): static
     {
-        if ($this->emprunts->removeElement($emprunt)) {
+        if ($this->Emprunt->removeElement($emprunt)) {
             if ($emprunt->getUser() === $this) {
                 $emprunt->setUser(null);
             }
@@ -231,29 +230,42 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getAbonnements(): Collection
+    public function getAbonnement(): Collection
     {
-        return $this->abonnements;
+        return $this->Abonnement;
     }
 
-    public function addAbonnement(Abonnements $abonnement): static
+    public function addAbonnement(Abonnement $abonnement): static
     {
-        if (!$this->abonnements->contains($abonnement)) {
-            $this->abonnements->add($abonnement);
+        if (!$this->Abonnement->contains($abonnement)) {
+            $this->Abonnement->add($abonnement);
             $abonnement->setAbonne($this);
         }
 
         return $this;
     }
 
-    public function removeAbonnement(Abonnements $abonnement): static
+    public function removeAbonnement(Abonnement $abonnement): static
     {
-        if ($this->abonnements->removeElement($abonnement)) {
+        if ($this->Abonnement->removeElement($abonnement)) {
             if ($abonnement->getAbonne() === $this) {
                 $abonnement->setAbonne(null);
             }
         }
 
         return $this;
+    }
+
+     public function hasActiveAbonnement(): bool
+    {
+        $now = new \DateTimeImmutable();
+
+        foreach ($this->Abonnement as $abonnement) {
+            if ($abonnement->getDateDebut() <= $now && $abonnement->getDateFin() >= $now) {
+                return true; // Abonnement actif trouvé
+            }
+        }
+
+        return false; // Aucun abonnement actif
     }
 }

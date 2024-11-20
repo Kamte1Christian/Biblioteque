@@ -11,13 +11,29 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GraphQl\Mutation;
 use ApiPlatform\Metadata\GraphQl\Query;
 use ApiPlatform\Metadata\GraphQl\QueryCollection;
-use App\Repository\AbonnementsRepository;
+use App\Controller\CreateAbonnementController;
+use App\Dto\CreateAbonnementInput;
+use App\Repository\AbonnementRepository;
+use App\Resolver\CreateAbonnementResolver;
 use DateTimeImmutable;
+use Doctrine\Common\EventArgs;
 use Doctrine\ORM\Mapping as ORM;
-#[ORM\Entity(repositoryClass: AbonnementsRepository::class)]
+use PhpParser\Builder\Method;
+use PhpParser\Node\Arg;
+
+#[ORM\Entity(repositoryClass: AbonnementRepository::class)]
 #[ApiResource(
     operations:[
-        new Post(security:"is_granted('ROLE_ADMIN')"),
+         new Post(
+            uriTemplate: '/abonnements/create',
+            denormalizationContext: ['groups' => ['abonnement:create']],
+            controller: CreateAbonnementController::class,
+            input: CreateAbonnementInput::class,
+            security: "is_granted('ROLE_ADMIN')",
+            name: 'create_abonnement',
+            output:false,
+
+        ),
         new Get(security:"is_granted('ROLE_ADMIN')"),
         new GetCollection(security:"is_granted('ROLE_ADMIN')"),
         new Delete(security:"is_granted('ROLE_ADMIN')"),
@@ -25,30 +41,35 @@ use Doctrine\ORM\Mapping as ORM;
     ],
     graphQlOperations:[
     new Query(),
-    new QueryCollection(paginationEnabled:false),
-    new Mutation(name:"create", paginationEnabled:false),
+    new QueryCollection(),
     new Mutation(name:"update"),
     new Mutation(name:"delete"),
     new Mutation(name:"restore"),
-    new QueryCollection(name:"collectionQuery",paginationEnabled:false)
+    new Mutation(
+            name: 'createAbonnement',
+            resolver: CreateAbonnementResolver::class,
+            args:[
+                'type'=>['type'=>'Int']
+            ]
+        ),
 ],
 paginationEnabled:false,
 security: "is_granted('ROLE_ADMIN')",
 securityMessage: "Accès refusé",
 
 )]
-class Abonnements
+class Abonnement
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(inversedBy: 'abonnements')]
+    #[ORM\ManyToOne(inversedBy: 'Abonnement')]
     #[ORM\JoinColumn(nullable: false)]
     private ?User $abonne = null;
 
-    #[ORM\ManyToOne(inversedBy: 'abonnements')]
+    #[ORM\ManyToOne(inversedBy: 'Abonnement')]
     #[ORM\JoinColumn(nullable: false)]
     private ?TypeAbonnement $type = null;
 
@@ -93,11 +114,12 @@ class Abonnements
     }
 
     public function setDateDebut(\DateTimeImmutable $date_debut): static
-    {
-        $this->date_debut = new DateTimeImmutable();
+{
+    $this->date_debut = $date_debut;
 
-        return $this;
-    }
+    return $this;
+}
+
 
     public function getDateFin(): ?\DateTimeImmutable
     {

@@ -13,6 +13,9 @@ services:
         bind:
             $passwordHasher: '@Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface'
 
+    # config/services.yaml
+
+
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
     App\:
@@ -22,15 +25,15 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
-    App\Resolver\EmpruntsEnCoursQuery:
+    App\Resolver\EmpruntEnCoursQuery:
         tags:
           - { name: api_platform.graphql.query_resolver }
 
-    App\GraphQL\Resolver\ExemplairesParLivreResolver:
+    App\Resolver\ExemplaireParBookResolver:
         arguments:
-            $exemplaireRepository: '@App\Repository\ExemplairesRepository'
+            $exemplaireRepository: '@App\Repository\ExemplaireRepository'
         tags:
-          - { name: api_platform.graphql.query_resolver }
+          - { name: api_platform.graphql.query_resolver , operation: 'collectionParLivre'}
 
     # App\EventListener\UserPasswordListener:
     #     tags:
@@ -38,12 +41,52 @@ services:
 
     App\State\UserProcessor:
         arguments:
-            $passwordHasher: '@Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface'
-    App\Resolver\LoginResolver:
+            $passwordHasher: '@security.password_hasher'
+            $em: '@doctrine.orm.entity_manager'
+    App\Resolver\CreateAbonnementResolver:
         arguments:
             $entityManager: '@doctrine.orm.entity_manager'
-            $passwordHasher: '@security.password_hasher'
-            $jwtManager: '@lexik_jwt_authentication.jwt_manager'
+        tags:
+            - { name: 'api_platform.graphql.mutation_resolver', operation: 'create_abonnement' }
+
+    App\Resolver\EmpruntResolver:
+        arguments:
+            $entityManager: '@doctrine.orm.entity_manager'
+        tags:
+            - { name: 'api_platform.graphql.mutation_resolver', operation: 'emprunter' }
+
+    App\Resolver\UserEmpruntResolver:
+        arguments:
+            $entityManager: '@doctrine.orm.entity_manager'
+        tags:
+            - { name: 'api_platform.graphql.mutation_resolver', operation: 'Useremprunter' }
+
+    App\Resolver\ReturnExemplaireResolver:
+        arguments:
+            $entityManager: '@doctrine.orm.entity_manager'
+        tags:
+            - { name: 'api_platform.graphql.mutation_resolver', operation: 'Backemprunt' }
+
+    App\Resolver\CreateExemplaireResolver:
+        arguments:
+            $entityManager: '@doctrine.orm.entity_manager'
+        tags:
+            - { name: 'api_platform.graphql.mutation_resolver', operation: 'createExemplaire' }
+
+    App\OpenApi\AbonnementDecorator:
+        decorates: 'api_platform.openapi.factory'
+        arguments: ['@App\OpenApi\AbonnementDecorator.inner']
+        autoconfigure: false
+
+    App\Controller\:
+        resource: '../src/Controller'
+        tags: ['controller.service_arguments']
+        # Uncomment the line below if controllers are not automatically loaded
+        autowire: true
+        autoconfigure: true
+
+    App\DataTransformer\ExemplaireInputTransformer:
+        tags: ['api_platform.data_transformer']
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

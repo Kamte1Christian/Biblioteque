@@ -2,20 +2,20 @@
 
 namespace App\Repository;
 
-use App\Entity\Abonnements;
+use App\Entity\Abonnement;
 use App\Entity\User;
 use DateTime;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<Abonnements>
+ * @extends ServiceEntityRepository<Abonnement>
  */
-class AbonnementsRepository extends ServiceEntityRepository
+class AbonnementRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, Abonnements::class);
+        parent::__construct($registry, Abonnement::class);
     }
 
      /**
@@ -25,7 +25,7 @@ class AbonnementsRepository extends ServiceEntityRepository
      * @return Abonnement|null
      * @throws NonUniqueResultException
      */
-    public function findActiveAbonnement(User $user): ?Abonnements
+    public function findActiveAbonnement(User $user): ?Abonnement
     {
         return $this->createQueryBuilder('a')
             ->andWhere('a.abonne = :user')
@@ -46,8 +46,17 @@ class AbonnementsRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+     public function findByEndDate(string $endDate): array
+    {
+        return $this->createQueryBuilder('a')
+            ->andWhere('a.date_fin = :endDate')
+            ->setParameter('endDate', $endDate)
+            ->getQuery()
+            ->getResult();
+    }
+
 //    /**
-//     * @return Abonnements[] Returns an array of Abonnements objects
+//     * @return Abonnement[] Returns an array of Abonnement objects
 //     */
 //    public function findByExampleField($value): array
 //    {
@@ -61,7 +70,7 @@ class AbonnementsRepository extends ServiceEntityRepository
 //        ;
 //    }
 
-//    public function findOneBySomeField($value): ?Abonnements
+//    public function findOneBySomeField($value): ?Abonnement
 //    {
 //        return $this->createQueryBuilder('a')
 //            ->andWhere('a.exampleField = :val')

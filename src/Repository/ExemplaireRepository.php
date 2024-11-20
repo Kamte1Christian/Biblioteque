@@ -3,24 +3,24 @@
 namespace App\Repository;
 
 use App\Entity\Emprunts;
-use App\Entity\Exemplaires;
+use App\Entity\Exemplaire;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<Exemplaires>
+ * @extends ServiceEntityRepository<Exemplaire>
  */
-class ExemplairesRepository extends ServiceEntityRepository
+class ExemplaireRepository extends ServiceEntityRepository
 {
-    private EmpruntsRepository $emprunt;
-    public function __construct(ManagerRegistry $registry, EmpruntsRepository $emprunt)
+    private EmpruntRepository $emprunt;
+    public function __construct(ManagerRegistry $registry, EmpruntRepository $emprunt)
     {
-        parent::__construct($registry, Exemplaires::class);
+        parent::__construct($registry, Exemplaire::class);
         $this->emprunt=$emprunt;
     }
 
-     public function countActiveExemplairesForUser(User $user): int
+     public function countActiveExemplaireForUser(User $user): int
     {
         $emprunt= $this->emprunt->findBy(['user'=>$user]);
         return $this->createQueryBuilder('ee')
@@ -34,7 +34,7 @@ class ExemplairesRepository extends ServiceEntityRepository
     }
 
 //    /**
-//     * @return Exemplaires[] Returns an array of Exemplaires objects
+//     * @return Exemplaire[] Returns an array of Exemplaire objects
 //     */
 //    public function findByExampleField($value): array
 //    {
@@ -48,7 +48,7 @@ class ExemplairesRepository extends ServiceEntityRepository
 //        ;
 //    }
 
-//    public function findOneBySomeField($value): ?Exemplaires
+//    public function findOneBySomeField($value): ?Exemplaire
 //    {
 //        return $this->createQueryBuilder('e')
 //            ->andWhere('e.exampleField = :val')

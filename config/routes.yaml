@@ -8,14 +8,14 @@ auth:
   path: /login
   methods: ['POST']
 
-
-emprunter_livre:
-  path: /api/emprunter/{id}
-  controller: App\Controller\EmpruntsController::emprunterLivre
+abonnement:
+  path: /abonnements/create
+  controller: App\Controller\CreateAbonnementController::createAbonnement
   methods: [POST]
 
-Peut_emprunter_livre:
-  path: /api/emprunter/{id}
-  controller: App\Controller\EmpruntsController::peutEmprunterLivre
+emprunter_Book:
+  path: /emprunter/create
+  controller: App\Controller\EmpruntController::borrow
   methods: [POST]
+
 

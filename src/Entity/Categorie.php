@@ -8,20 +8,18 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use ApiPlatform\Metadata\Get;
-use App\Repository\ClassesRepository;
+use App\Repository\CategorieRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use ApiPlatform\Metadata\GraphQl\Mutation;
 use ApiPlatform\Metadata\GraphQl\Query;
 use ApiPlatform\Metadata\GraphQl\QueryCollection;
-use Symfony\Component\Validator\Constraints as Assert;
-use function PHPSTORM_META\type;
 use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
-
-#[ApiFilter(SearchFilter::class, properties: ['classe' => 'partial'])]
-#[ORM\Entity(repositoryClass: ClassesRepository::class)]
+use Symfony\Component\Validator\Constraints as Assert;
+#[ApiFilter(SearchFilter::class, properties: ['categorie' => 'partial'])]
+#[ORM\Entity(repositoryClass: CategorieRepository::class)]
 #[ApiResource(
     operations:[
         new Post(security:"is_granted('ROLE_ADMIN')"),
@@ -43,7 +41,7 @@ use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
 security: "is_granted('ROLE_ADMIN')",
 securityMessage: "Accès refusé",
 )]
-class Classes
+class Categorie
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -51,18 +49,17 @@ class Classes
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Assert\Unique()]
-    private ?string $classe = null;
+    private ?string $categorie = null;
 
     /**
-     * @var Collection<int, Livres>
+     * @var Collection<int, Book>
      */
-    #[ORM\OneToMany(targetEntity: Livres::class, mappedBy: 'classe')]
-    private Collection $livres;
+    #[ORM\OneToMany(targetEntity: Book::class, mappedBy: 'categorie')]
+    private Collection $Book;
 
     public function __construct()
     {
-        $this->livres = new ArrayCollection();
+        $this->Book = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -70,42 +67,42 @@ class Classes
         return $this->id;
     }
 
-    public function getClasse(): ?string
+    public function getCategorie(): ?string
     {
-        return $this->classe;
+        return $this->categorie;
     }
 
-    public function setClasse(string $classe): static
+    public function setCategorie(string $categorie): static
     {
-        $this->classe = $classe;
+        $this->categorie = $categorie;
 
         return $this;
     }
 
     /**
-     * @return Collection<int, Livres>
+     * @return Collection<int, Book>
      */
-    public function getLivres(): Collection
+    public function getBook(): Collection
     {
-        return $this->livres;
+        return $this->Book;
     }
 
-    public function addLivre(Livres $livre): static
+    public function addBook(Book $Book): static
     {
-        if (!$this->livres->contains($livre)) {
-            $this->livres->add($livre);
-            $livre->setClasse($this);
+        if (!$this->Book->contains($Book)) {
+            $this->Book->add($Book);
+            $Book->setCategorie($this);
         }
 
         return $this;
     }
 
-    public function removeLivre(Livres $livre): static
+    public function removeBook(Book $Book): static
     {
-        if ($this->livres->removeElement($livre)) {
+        if ($this->Book->removeElement($Book)) {
             // set the owning side to null (unless already changed)
-            if ($livre->getClasse() === $this) {
-                $livre->setClasse(null);
+            if ($Book->getCategorie() === $this) {
+                $Book->setCategorie(null);
             }
         }
 
