@@ -49,6 +49,18 @@ services:
         tags:
             - { name: 'api_platform.graphql.mutation_resolver', operation: 'create_abonnement' }
 
+    App\Resolver\NotationResolver:
+        arguments:
+            $entityManager: '@doctrine.orm.entity_manager'
+        tags:
+            - { name: 'api_platform.graphql.mutation_resolver', operation: 'createNotation' }
+
+    App\Resolver\AverageScoreResolver:
+        arguments:
+            $entityManager: '@doctrine.orm.entity_manager'
+        tags:
+            - { name: 'api_platform.graphql.mutation_resolver', operation: 'getAverageScore' }
+
     App\Resolver\EmpruntResolver:
         arguments:
             $entityManager: '@doctrine.orm.entity_manager'

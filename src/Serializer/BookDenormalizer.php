@@ -1,12 +1,13 @@
 <?php
+// api/src/Serializer/BookDenormalizer.php
 
 namespace App\Serializer;
 
-use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 use Symfony\Component\HttpFoundation\File\File;
-class UploadedFileDenormalizer implements DenormalizerInterface
-{
+use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
+final class BookDenormalizer implements DenormalizerInterface
+{
     public function denormalize($data, string $type, string $format = null, array $context = []): File
     {
         return $data;
@@ -20,8 +21,6 @@ class UploadedFileDenormalizer implements DenormalizerInterface
     public function getSupportedTypes(?string $format): array
     {
         return [
-            'object' => null,
-            '*' => false,
             File::class => true,
         ];
     }

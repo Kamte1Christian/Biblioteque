@@ -21,6 +21,7 @@ use ApiPlatform\Metadata\ApiProperty;
 use Symfony\Component\Validator\Constraints as Assert;
 use Vich\UploaderBundle\Mapping\Annotation as Vich;
 use ApiPlatform\OpenApi\Model;
+use App\Resolver\AverageScoreResolver;
 use App\State\SaveMediaObject;
 use DateTimeImmutable;
 use Symfony\Component\HttpFoundation\File\File as File;
@@ -31,11 +32,14 @@ use Doctrine\DBAL\Types\Types;
 #[ORM\Entity(repositoryClass: BookRepository::class)]
 #[Vich\Uploadable]
 #[ApiResource(
-   normalizationContext: ['groups' => ['media_object:read']],
-    types: ['https://schema.org/MediaObject'],
+    normalizationContext:['groups'=>['book:read']],
     outputFormats: ['jsonld' => ['application/ld+json']],
     operations: [
-               new Post(
+        // Upload Front Cover
+        new Post(
+             uriTemplate: '/books/{id}/front-cover-update',
+             name: 'cover_upload',
+            denormalizationContext: ['groups' => ['book:update:front']],
             inputFormats: ['multipart' => ['multipart/form-data']],
             openapi: new Model\Operation(
                 requestBody: new Model\RequestBody(
@@ -44,16 +48,10 @@ use Doctrine\DBAL\Types\Types;
                             'schema' => [
                                 'type' => 'object',
                                 'properties' => [
-                                    'file' => [
-                                        'type' => 'String',
+                                    'coverImageFile' => [
+                                        'type' => 'string',
                                         'format' => 'binary'
-                                    ],
-                                    'title' => ['type' => 'String'],
-                                    'Author' => ['type' => 'String'],
-                                    'description' => ['type' => 'String'],
-                                    'pages' => ['type' => 'Int'],
-                                    'classe'=>['type'=>'String'],
-                                    'categorie'=>['type'=>'String']
+                                    ]
                                 ]
                             ]
                         ]
@@ -61,24 +59,62 @@ use Doctrine\DBAL\Types\Types;
                 )
             )
         ),
+        new Post(
+             uriTemplate: '/books/{id}/back-cover-update',
+             name: 'content_upload',
+            denormalizationContext: ['groups' => ['book:update:back']],
+            inputFormats: ['multipart' => ['multipart/form-data']],
+            openapi: new Model\Operation(
+                requestBody: new Model\RequestBody(
+                    content: new \ArrayObject([
+                        'multipart/form-data' => [
+                            'schema' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    'bookFileField' => [
+                                        'type' => 'string',
+                                        'format' => 'binary'
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ])
+                )
+            )
+        ),
+        // Autres opérations
+        new Post(denormalizationContext:['groups' => ['book:create']]),
         new Get(),
-        new GetCollection( ),
-        new Delete( ),
-        new Put( ),
+        new GetCollection(),
+        new Delete(),
+        new Put(),
     ],
-
-     graphQlOperations:[
-            new Query(),
-            new QueryCollection(paginationEnabled:\false),
-            new Mutation(name:"create"),
-            new Mutation(name:"update"),
-            new Mutation(name:"delete"),
-            new Mutation(name:"restore"),
-            new QueryCollection(name:"collectionQuery",paginationEnabled:\false)
-        ],
-        paginationEnabled:false,
-security: "is_granted('ROLE_ADMIN')",
-securityMessage: "Accès refusé",
+    graphQlOperations:[
+        new Query(),
+        new QueryCollection(paginationEnabled:false),
+        new Mutation(
+            name:"create",
+            denormalizationContext:['groups' => ['book:create']]
+            ),
+            new Mutation(
+            normalizationContext:['groups'=>['book:read']],
+            name: "getAverageScore",
+            resolver: AverageScoreResolver::class,
+            args: [
+                'Bookid' => [
+                    'type' => 'Int!',
+                    'description' => 'The id of the book',
+                ],
+            ],
+        ),
+        new Mutation(name:"update"),
+        new Mutation(name:"delete"),
+        new Mutation(name:"restore"),
+        new QueryCollection(name:"collectionQuery",paginationEnabled:false)
+    ],
+    paginationEnabled:false,
+    security: "is_granted('ROLE_ADMIN')",
+    securityMessage: "Accès refusé",
 )]
 class Book
 {
@@ -88,21 +124,26 @@ class Book
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['book:create'])]
     private ?string $title = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['book:create'])]
     private ?string $Author = null;
 
     #[ORM\Column(type: Types::SMALLINT, nullable: true)]
+    #[Groups(['book:create'])]
     private ?int $pages = null;
 
     #[ORM\Column(type: Types::BOOLEAN, nullable: true)]
+    #[Groups(['book:create'])]
     private ?bool $isFree = null;
 
-     #[ORM\Column(nullable: true)]
+    #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $date_publication = null;
 
     #[ORM\Column(length: 300, nullable: true)]
+    #[Groups(['book:create'])]
     private ?string $description = null;
 
     /**
@@ -112,39 +153,51 @@ class Book
     private Collection $Exemplaire;
 
     #[ORM\ManyToOne(inversedBy: 'Book')]
+    #[Groups(['book:create'])]
     private ?Categorie $categorie = null;
 
     #[ORM\ManyToOne(inversedBy: 'Book')]
     private ?Classe $classe = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[ApiProperty(types: ['https://schema.org/contentUrl'])]
-    #[Groups(['book:read'])]
-    private ?string $contentUrl = null;
+    private ?string $coverImage = null;
+
+    #[Vich\UploadableField(mapping: "front_cover_upload", fileNameProperty: "coverImage")]
+    #[Groups(['book:update:front'])]
+    private ?File $coverImageFile = null;
+
+    #[ORM\Column(type: "datetime", nullable: true)]
+    private ?\DateTimeInterface $updatedAt = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-    private ?string $filePath = null;
+    private ?string $bookFile = null;
 
-    #[Vich\UploadableField(mapping: "media_object", fileNameProperty: "filePath")]
-    #[Groups(['book:write'])]
-    public ?File $file = null;
+    #[Vich\UploadableField(mapping: "back_cover_upload", fileNameProperty: "bookFile")]
+    #[Groups(['book:update:back'])]
+    #[Assert\File(
+        maxSize: "10M",
+    )]
+    private ?File $bookFileField = null;
 
-    public function setFile(?File $file = null): static
+    /**
+     * @var Collection<int, Notation>
+     */
+    #[ORM\OneToMany(targetEntity: Notation::class, mappedBy: 'Book')]
+    private Collection $notations;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['book:read'])]
+    private ?int $Averagescore = null;
+
+
+    public function __construct()
     {
-        $this->file = $file;
-
-        if ($file) {
-            // Automatically set the filePath using the original filename
-            $this->filePath = uniqid() . '.' . $file->guessExtension(); // Ensures a unique filename
-
-            // Automatically set the content URL based on the file path
-            $this->contentUrl = '/images/covers' . $this->filePath; // Adjust the path as necessary
-        }
-
-        return $this;
+        $this->Exemplaire = new ArrayCollection();
+        $this->date_publication = new DateTimeImmutable();
+        $this->notations = new ArrayCollection();
     }
 
-    // Other getters and setters...
+    // Autres getters et setters...
 
     public function getId(): ?int
     {
@@ -195,15 +248,14 @@ class Book
         return $this;
     }
 
-     public function getDatePublication(): ?\DateTimeImmutable
+    public function getDatePublication(): ?\DateTimeImmutable
     {
         return $this->date_publication;
     }
 
     public function setDatePublication(\DateTimeImmutable $date_publication): static
     {
-        $this->date_publication = new DateTimeImmutable();
-
+        $this->date_publication = $date_publication;
         return $this;
     }
 
@@ -215,7 +267,6 @@ class Book
     public function setDescription(?string $description): static
     {
         $this->description = $description;
-
         return $this;
     }
 
@@ -257,7 +308,6 @@ class Book
     public function setCategorie(?Categorie $categorie): static
     {
         $this->categorie = $categorie;
-
         return $this;
     }
 
@@ -269,29 +319,117 @@ class Book
     public function setClasse(?Classe $classe): static
     {
         $this->classe = $classe;
+        return $this;
+    }
+
+    public function getCoverImage(): ?string
+    {
+        return $this->coverImage;
+    }
+
+    public function setCoverImage(?string $coverImage): static
+    {
+        $this->coverImage = $coverImage;
 
         return $this;
     }
 
-    public function getContentUrl(): ?string
+    public function getCoverImageFile(): ?File
     {
-        return $this->contentUrl;
+        return $this->coverImageFile;
     }
 
-    public function setContentUrl(string $contentUrl): static
+    public function setCoverImageFile(?File $coverImageFile): static
     {
-        $this->contentUrl = $contentUrl;
+        $this->coverImageFile = $coverImageFile;
+
+        if ($coverImageFile) {
+            $this->updatedAt = new \DateTimeImmutable();
+            $this->coverImage = uniqid() . '.' . $coverImageFile->guessExtension();
+        }
+
         return $this;
     }
 
-    public function getFilePath(): ?string
+    public function getUpdatedAt(): ?\DateTimeInterface
     {
-        return $this->filePath;
+        return $this->updatedAt;
     }
 
-    public function setFilePath(string $filePath): static
+    public function setUpdatedAt(?\DateTimeInterface $updatedAt): static
     {
-        $this->filePath = $filePath;
+        $this->updatedAt = $updatedAt;
+
+        return $this;
+    }
+
+      public function getBookFile(): ?string
+    {
+        return $this->bookFile;
+    }
+
+    public function setBookFile(?string $bookFile): static
+    {
+        $this->bookFile = $bookFile;
+
+        return $this;
+    }
+
+    public function getBookFileField(): ?File
+    {
+        return $this->bookFileField;
+    }
+
+    public function setBookFileField(?File $bookFileField): static
+    {
+        $this->bookFileField = $bookFileField;
+
+        if ($bookFileField) {
+            $this->updatedAt = new \DateTimeImmutable();
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Notation>
+     */
+    public function getNotations(): Collection
+    {
+        return $this->notations;
+    }
+
+    public function addNotation(Notation $notation): static
+    {
+        if (!$this->notations->contains($notation)) {
+            $this->notations->add($notation);
+            $notation->setBook($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNotation(Notation $notation): static
+    {
+        if ($this->notations->removeElement($notation)) {
+            // set the owning side to null (unless already changed)
+            if ($notation->getBook() === $this) {
+                $notation->setBook(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function getAveragescore(): ?int
+    {
+        return $this->Averagescore;
+    }
+
+    public function setAveragescore(?int $Averagescore): static
+    {
+        $this->Averagescore = $Averagescore;
+
         return $this;
     }
 }

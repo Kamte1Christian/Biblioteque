@@ -25,7 +25,14 @@ class UserEmpruntResolver implements MutationResolverInterface
     public function __invoke(?object $item, array $context): ?object
     {
         // Get the authenticated user
+      $admin = $this->security->getUser();
+        if (!$admin) {
+            throw new \Exception('user not authenticated');
+        }
+         if (!in_array('ROLE_ADMIN', $admin->getRoles(), true)) {
 
+            throw new \InvalidArgumentException('Restricted root, Access denied.');
+        }
 
         // Retrieve the exemplaire IRIs from the GraphQL arguments
         $args = $context['args']['input'] ?? [];

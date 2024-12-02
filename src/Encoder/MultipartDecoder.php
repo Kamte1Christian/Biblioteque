@@ -1,15 +1,16 @@
 <?php
+// api/src/Encoder/MultipartDecoder.php
 
-namespace App\Serializer;
+namespace App\Encoder;
 
-use Symfony\Component\Serializer\Encoder\DecoderInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
-class MultipartDecoder implements DecoderInterface
-{
+use Symfony\Component\Serializer\Encoder\DecoderInterface;
 
+final class MultipartDecoder implements DecoderInterface
+{
     public const FORMAT = 'multipart';
 
-    public function __construct(private RequestStack $requestStack)
+    public function __construct(private readonly RequestStack $requestStack)
     {
     }
 
@@ -22,16 +23,13 @@ class MultipartDecoder implements DecoderInterface
         }
 
         return array_map(static function (string $element) {
-                // Multipart form values will be encoded in JSON.
-                $decoded = json_decode($element, true);
-
-                return \is_array($decoded) ? $decoded : $element;
-            }, $request->request->all()) + $request->files->all();
+            // Multipart form values will be encoded in JSON.
+            return json_decode($element, true, flags: \JSON_THROW_ON_ERROR);
+        }, $request->request->all()) + $request->files->all();
     }
 
     public function supportsDecoding(string $format): bool
     {
         return self::FORMAT === $format;
     }
-
 }

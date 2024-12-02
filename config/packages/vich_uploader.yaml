@@ -1,10 +1,16 @@
+
 vich_uploader:
-  db_driver: orm
-  metadata:
-    type: attribute
-  mappings:
-    media_object:
-      uri_prefix: /images/covers
-      upload_destination: '%kernel.project_dir%/public/images/covers'
-      # Will rename uploaded files using a uniqueid as a suffix.
-      namer: Vich\UploaderBundle\Naming\SmartUniqueNamer
+    db_driver: orm
+    mappings:
+        front_cover_upload:
+            uri_prefix: /uploads/books/frontcovers
+            upload_destination: '%kernel.project_dir%/public/uploads/books/frontcovers'
+            namer:
+                service: Vich\UploaderBundle\Naming\SmartUniqueNamer
+
+        back_cover_upload:
+            uri_prefix: /uploads/books/backcovers
+            upload_destination: '%kernel.project_dir%/public/uploads/books/backcovers'
+            namer:
+                service: Vich\UploaderBundle\Naming\SmartUniqueNamer
+

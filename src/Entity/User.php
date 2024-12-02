@@ -110,10 +110,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Abonnement::class, mappedBy: 'abonne', orphanRemoval: true)]
     private Collection $Abonnement;
 
+    /**
+     * @var Collection<int, Notation>
+     */
+    #[ORM\OneToMany(targetEntity: Notation::class, mappedBy: 'User')]
+    private Collection $notations;
+
     public function __construct()
     {
         $this->Emprunt = new ArrayCollection();
         $this->Abonnement = new ArrayCollection();
+        $this->notations = new ArrayCollection();
     }
 
     // Password handling (hashing logic)
@@ -268,4 +275,34 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return false; // Aucun abonnement actif
     }
+
+     /**
+      * @return Collection<int, Notation>
+      */
+     public function getNotations(): Collection
+     {
+         return $this->notations;
+     }
+
+     public function addNotation(Notation $notation): static
+     {
+         if (!$this->notations->contains($notation)) {
+             $this->notations->add($notation);
+             $notation->setUser($this);
+         }
+
+         return $this;
+     }
+
+     public function removeNotation(Notation $notation): static
+     {
+         if ($this->notations->removeElement($notation)) {
+             // set the owning side to null (unless already changed)
+             if ($notation->getUser() === $this) {
+                 $notation->setUser(null);
+             }
+         }
+
+         return $this;
+     }
 }

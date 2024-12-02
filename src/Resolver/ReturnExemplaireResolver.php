@@ -23,6 +23,14 @@ class ReturnExemplaireResolver implements MutationResolverInterface
 
     public function __invoke(?object $item, array $context): ?object
     {
+         $admin = $this->security->getUser();
+        if (!$admin) {
+            throw new \Exception('user not authenticated');
+        }
+         if (!in_array('ROLE_ADMIN', $admin->getRoles(), true)) {
+
+            throw new \InvalidArgumentException('Restricted root, Access denied.');
+        }
 
         // Retrieve the exemplaire IDs from the GraphQL arguments
         $args = $context['args']['input'] ?? [];
@@ -47,9 +55,9 @@ class ReturnExemplaireResolver implements MutationResolverInterface
         // Validate that the exemplaires belong to the user and the active Emprunt
         $exemplairesToReturn = [];
         foreach ($codes as $code) {
-            $exemplaire = $this->entityManager->getRepository(Exemplaire::class)->findOneBy(['code_bar'=>$code]);
+            $exemplaire = $this->entityManager->getRepository(Exemplaire::class)->findOneBy(['code_bar'=>$code,'emprunt'=>$emprunt]);
 
-            if (!$exemplaire || $exemplaire->getEmprunt() !== $emprunt) {
+            if (!$exemplaire) {
                 throw new \Exception("Exemplaire with code bar {$code} does not belong to your active Emprunt.");
             }
 
