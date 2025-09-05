@@ -83,7 +83,11 @@ use Doctrine\DBAL\Types\Types;
             )
         ),
         // Autres opérations
-        new Post(denormalizationContext:['groups' => ['book:create']]),
+        new Post(
+            denormalizationContext:['groups' => ['book:create']],
+            inputFormats: ['json' => ['application/json']],
+            outputFormats: ['json' => ['application/json']],
+        ),
         new Get(),
         new GetCollection(),
         new Delete(),
@@ -113,8 +117,8 @@ use Doctrine\DBAL\Types\Types;
         new QueryCollection(name:"collectionQuery",paginationEnabled:false)
     ],
     paginationEnabled:false,
-    security: "is_granted('ROLE_ADMIN')",
-    securityMessage: "Accès refusé",
+    // security: "is_granted('ROLE_ADMIN')",
+    // securityMessage: "Accès refusé",
 )]
 class Book
 {
@@ -153,7 +157,6 @@ class Book
     private Collection $Exemplaire;
 
     #[ORM\ManyToOne(inversedBy: 'Book')]
-    #[Groups(['book:create'])]
     private ?Categorie $categorie = null;
 
     #[ORM\ManyToOne(inversedBy: 'Book')]
